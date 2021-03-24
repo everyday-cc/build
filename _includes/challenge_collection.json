@@ -1,0 +1,68 @@
+{
+    {% assign page_size = site.pagination.page_size | default: 15 -%}
+    {% assign current_page = page.page | default: 1 -%}
+    {% assign for_offset = current_page | minus:1 | times:page_size -%}
+    {% assign for_count = 0 -%}
+    "title": {{ page.title | default: "Challenges" | jsonify }},
+    "path": {{ page.path | jsonify }},
+    "page": {{ current_page }},
+    "value": [
+        {% capture challenges_where_exp %}challenge.topics contains '{{ page.topic | default: site.topic }}'{% endcapture -%}
+        {% assign challenges = site.challenges | where_exp: "challenge", challenges_where_exp -%}
+        {% for challenge in challenges limit:page_size offset:for_offset -%}
+        {
+            {% if forloop.last -%}
+                {% assign for_count = forloop.length -%}
+            {% endif -%}
+            "path": {{ challenge.path | jsonify }},
+            "title": {{ challenge.title | jsonify }},
+            "excerpt": {{ challenge.excerpt | strip_html | normalize_whitespace | strip | jsonify }},
+            "type": {{ challenge.type | jsonify }},
+            "sourceUrl": "{{ challenge.url | absolute_url }}",
+            "webUrl": "{{ site.webUrl }}{{ challenge.path | replace: '_challenges/','/challenge/' | replace: '.md','' }}",
+            "heat": {{ challenge.heat | default: 0 | jsonify }},
+            {% if challenge.provider -%}
+            "provider": {
+                {% if challenge.provider.domain -%}
+                "domain": "{{ challenge.provider.domain }}",
+                {% endif -%}
+                {% if challenge.provider.images -%}
+                "images": [
+                    {% for image in challenge.provider.images -%}
+                    {
+                        "url": "{{ image.url | absolute_url }}",
+                        "width": {{ image.width | default: 0 }},
+                        "height": {{ image.height | default: 0 }}
+                    }{% unless forloop.last -%},{% endunless %}
+                    {% endfor %}
+                ],
+                {% endif -%}
+                "name": {{ challenge.provider.name | jsonify }}
+            },
+            {% endif -%}
+            "images": [
+                {% for image in challenge.images -%}
+                {
+                    "width": {{ image.width | default: 0 }},
+                    "height": {{ image.height | default: 0 }},
+                    "quality": {{ image.quality | default: 100 }},
+                    "url": "{{ image.url | absolute_url }}",
+                    "isCached": {{ image.isCached | default: false }},
+                    "attribution": {{ image.attribution | jsonify }},
+                    "title": {{ image.title | jsonify }}
+                }{% unless forloop.last -%},{% endunless %}
+                {% endfor %}
+            ],
+            "locale": {{ challenge.locale | default: site.locale | jsonify }},
+            "levels": {{ challenge.levels | jsonify }},
+            "topics": {{ challenge.topics | jsonify }},
+            "tags": {{ challenge.tags | jsonify }}
+        }{% unless forloop.last -%},{% endunless %}
+        {% endfor %}
+    ],
+    {% if for_count < page_size or current_page == 9 -%}
+    "nextPage": null
+    {% else -%}
+    "nextPage": "{{ current_page | plus:1 }}"
+    {%- endif %}
+}
